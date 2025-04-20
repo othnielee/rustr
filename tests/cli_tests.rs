@@ -10,6 +10,7 @@ fn no_arguments() {
     assert_eq!(
         cfg,
         CliArgs {
+            test: false,
             build: false,
             release: false,
             release_bin: None,
@@ -102,8 +103,8 @@ fn dash_dash_as_argument_separator() {
 #[test]
 fn interleaved_flags_and_args() {
     // Test complex interleaving of flags and args
-    let cfg = parse_args_from(v(&["--build", "arg1", "--project=myproj", "arg2"])).unwrap();
-    assert!(cfg.build);
+    let cfg = parse_args_from(v(&["--test", "arg1", "--project=myproj", "arg2"])).unwrap();
+    assert!(cfg.test);
     assert_eq!(cfg.project, Some("myproj".into()));
     assert_eq!(
         cfg.project_args,
@@ -140,15 +141,10 @@ fn project_with_hyphen() {
 #[test]
 fn multiple_flag_formats() {
     // Test multiple flag formats in same command
-    let cfg = parse_args_from(v(&[
-        "--build",
-        "--project",
-        "myproj",
-        "--release-bin=/path",
-    ]))
-    .unwrap();
+    let cfg =
+        parse_args_from(v(&["--test", "--project", "myproj", "--release-bin=/path"])).unwrap();
 
-    assert!(cfg.build);
+    assert!(cfg.test);
     assert_eq!(cfg.project, Some("myproj".into()));
     assert_eq!(cfg.release_bin, Some(Some("/path".into())));
 }

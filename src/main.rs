@@ -33,6 +33,15 @@ fn main() -> Result<()> {
     };
 
     // If any of our specific flags are set, do that action and exit
+
+    if args.test {
+        print_banner();
+        let project_dir = find_project_dir(&project_name)?;
+        run_cargo_command(&project_dir, &["test"])?;
+        println!("Test complete");
+        return Ok(());
+    }
+
     if args.build {
         print_banner();
         let project_dir = find_project_dir(&project_name)?;
@@ -81,7 +90,9 @@ fn main() -> Result<()> {
         .join(TARGET_DIR)
         .join(RELEASE_DIR)
         .join(format!("{}{}", binary_name, BINARY_EXTENSION));
-    let status = Command::new(binary_path).args(&args.project_args).status()?;
+    let status = Command::new(binary_path)
+        .args(&args.project_args)
+        .status()?;
 
     // Pass through the application's exit code
     std::process::exit(status.code().unwrap_or(1));

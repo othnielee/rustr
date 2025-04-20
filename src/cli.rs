@@ -5,6 +5,7 @@ use crate::helpers::{print_banner, print_help};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct CliArgs {
+    pub test: bool,
     pub build: bool,
     pub release: bool,
     pub release_bin: Option<Option<String>>,
@@ -44,6 +45,7 @@ where
                 print_banner();
                 std::process::exit(0);
             }
+            "--test" => parsed_args.test = true,
             "--build" => parsed_args.build = true,
             "--release" => parsed_args.release = true,
 
