@@ -3,6 +3,7 @@ use std::env;
 
 use crate::helpers::{print_banner, print_help};
 
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct CliArgs {
     pub build: bool,
     pub release: bool,
@@ -12,27 +13,29 @@ pub struct CliArgs {
     pub project_args: Vec<String>,
 }
 
-impl Default for CliArgs {
-    fn default() -> Self {
-        Self {
-            build: false,
-            release: false,
-            release_bin: None,
-            project: None,
-            project_name: None,
-            project_args: Vec::new(),
-        }
-    }
-}
+pub fn parse_args_from<I, S>(iter: I) -> Result<CliArgs>
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let mut tokens = iter.into_iter().map(Into::into).peekable();
 
-pub fn parse_args() -> Result<CliArgs> {
-    let mut all_args = env::args().skip(1).peekable();
-
-    let mut cli_args = CliArgs::default();
+    let mut parsed_args = CliArgs::default();
     let mut project_args = Vec::<String>::new();
+    let mut stop_option_parsing = false;
 
-    while let Some(arg) = all_args.next() {
-        match arg.as_str() {
+    while let Some(token) = tokens.next() {
+        if stop_option_parsing {
+            project_args.push(token);
+            continue;
+        }
+
+        if token == "--" {
+            stop_option_parsing = true;
+            continue;
+        }
+
+        match token.as_str() {
             "-h" | "--help" => {
                 print_help();
                 std::process::exit(0);
@@ -41,24 +44,24 @@ pub fn parse_args() -> Result<CliArgs> {
                 print_banner();
                 std::process::exit(0);
             }
-            "--build" => cli_args.build = true,
-            "--release" => cli_args.release = true,
+            "--build" => parsed_args.build = true,
+            "--release" => parsed_args.release = true,
 
             arg if arg == "--release-bin" || arg.starts_with("--release-bin=") => {
                 if let Some(dest) = arg.strip_prefix("--release-bin=") {
-                    cli_args.release_bin = if dest.is_empty() {
+                    parsed_args.release_bin = if dest.is_empty() {
                         Some(None)
                     } else {
                         Some(Some(dest.into()))
                     };
-                } else if let Some(next) = all_args.peek() {
+                } else if let Some(next) = tokens.peek() {
                     if !next.starts_with("--") {
-                        cli_args.release_bin = Some(Some(all_args.next().unwrap()));
+                        parsed_args.release_bin = Some(Some(tokens.next().unwrap()));
                     } else {
-                        cli_args.release_bin = Some(None);
+                        parsed_args.release_bin = Some(None);
                     }
                 } else {
-                    cli_args.release_bin = Some(None);
+                    parsed_args.release_bin = Some(None);
                 }
             }
 
@@ -67,9 +70,9 @@ pub fn parse_args() -> Result<CliArgs> {
                     if name.is_empty() {
                         return Err(anyhow!("Missing project name after --project"));
                     }
-                    cli_args.project = Some(name.into());
-                } else if let Some(name) = all_args.next() {
-                    cli_args.project = Some(name);
+                    parsed_args.project = Some(name.into());
+                } else if let Some(name) = tokens.next() {
+                    parsed_args.project = Some(name);
                 } else {
                     return Err(anyhow!("Missing project name after --project"));
                 }
@@ -79,15 +82,19 @@ pub fn parse_args() -> Result<CliArgs> {
         }
     }
 
-    if cli_args.project.is_none() {
+    if parsed_args.project.is_none() {
         if let Some(first) = project_args.first() {
             if !first.starts_with("--") {
-                cli_args.project_name = Some(project_args.remove(0));
+                parsed_args.project_name = Some(project_args.remove(0));
             }
         }
     }
 
-    cli_args.project_args = project_args;
+    parsed_args.project_args = project_args;
 
-    Ok(cli_args)
+    Ok(parsed_args)
+}
+
+pub fn parse_args() -> Result<CliArgs> {
+    parse_args_from(env::args().skip(1))
 }
