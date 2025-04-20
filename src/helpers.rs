@@ -21,16 +21,15 @@ pub fn print_help() {
     println!("\nRust/Cargo Task Runner\n");
 
     println!(
-        "{} {} {}\n",
+        "{} {} [OPTIONS] [PROJECT_NAME] [ARGS...]\n",
         "Usage:".bold().underline(),
-        "rustr".bold(),
-        "[OPTIONS] [PROJECT_NAME] [ARGS...]"
+        "rustr".bold()
     );
 
     println!("{}", "Arguments:".bold().underline());
-    println!("  {}", "[PROJECT_NAME]");
+    println!("  [PROJECT_NAME]");
     println!("          Project name");
-    println!("  {}", "[ARGS]...");
+    println!("  [ARGS]...");
     println!("          Arguments to pass to the target application\n");
 
     println!("{}", "Options:".bold().underline());
@@ -38,13 +37,15 @@ pub fn print_help() {
     println!("          Build the project");
     println!("      {}", "--release".bold());
     println!("          Build in release mode");
-    println!("      {} {}", "--release-bin".bold(), "[<DESTINATION>]");
+    println!("      {} [<DESTINATION>]", "--release-bin".bold());
     println!("          Build in release mode and copy to ~/bin (or specified path)");
-    println!("      {} {}", "--project".bold(), "<PROJECT>");
+    println!("      {} <PROJECT>", "--project".bold());
     println!("          Explicitly specify the target project");
-    println!("  {}", "-h, --help".bold());
+    println!("      --");
+    println!("          Stop option parsing and pass the rest verbatim to the target application");
+    println!("  -h, --help");
     println!("          Print help");
-    println!("  {}", "-V, --version".bold());
+    println!("  -V, --version");
     println!("          Print version");
 }
 
