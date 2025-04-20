@@ -16,6 +16,8 @@ pub fn print_banner() {
 }
 
 pub fn print_help() {
+    print_banner();
+
     println!("\nRust/Cargo Task Runner\n");
 
     println!(

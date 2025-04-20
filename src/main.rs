@@ -28,7 +28,6 @@ fn main() -> Result<()> {
         // Get project name from current directory's Cargo.toml
         get_binary_name(&PathBuf::from("."))?
     } else {
-        print_banner();
         print_help();
         return Ok(());
     };
@@ -82,7 +81,7 @@ fn main() -> Result<()> {
         .join(TARGET_DIR)
         .join(RELEASE_DIR)
         .join(format!("{}{}", binary_name, BINARY_EXTENSION));
-    let status = Command::new(binary_path).args(&args.app_args).status()?;
+    let status = Command::new(binary_path).args(&args.project_args).status()?;
 
     // Pass through the application's exit code
     std::process::exit(status.code().unwrap_or(1));

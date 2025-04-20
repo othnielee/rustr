@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use std::env;
 
 use crate::helpers::{print_banner, print_help};
 
@@ -8,7 +9,7 @@ pub struct CliArgs {
     pub release_bin: Option<Option<String>>,
     pub project: Option<String>,
     pub project_name: Option<String>,
-    pub app_args: Vec<String>,
+    pub project_args: Vec<String>,
 }
 
 impl Default for CliArgs {
@@ -19,91 +20,74 @@ impl Default for CliArgs {
             release_bin: None,
             project: None,
             project_name: None,
-            app_args: Vec::new(),
+            project_args: Vec::new(),
         }
     }
 }
 
 pub fn parse_args() -> Result<CliArgs> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut all_args = env::args().skip(1).peekable();
 
-    let mut config = CliArgs::default();
-    let mut i = 0;
+    let mut cli_args = CliArgs::default();
+    let mut project_args = Vec::<String>::new();
 
-    // Extract known flags and project specifications
-    while i < args.len() {
-        let arg = &args[i];
-
+    while let Some(arg) = all_args.next() {
         match arg.as_str() {
-            "--help" | "-h" => {
-                // Print help and exit
+            "-h" | "--help" => {
                 print_help();
                 std::process::exit(0);
             }
-            "--version" | "-V" => {
-                // Print version and exit
+            "-V" | "--version" => {
                 print_banner();
                 std::process::exit(0);
             }
-            "--build" => {
-                config.build = true;
-                i += 1;
-            }
-            "--release" => {
-                config.release = true;
-                i += 1;
-            }
+            "--build" => cli_args.build = true,
+            "--release" => cli_args.release = true,
+
             arg if arg == "--release-bin" || arg.starts_with("--release-bin=") => {
                 if let Some(dest) = arg.strip_prefix("--release-bin=") {
-                    // --release-bin=/some/path
-                    // --release-bin= (empty → treat as “no value”)
-                    config.release_bin = if dest.is_empty() {
+                    cli_args.release_bin = if dest.is_empty() {
                         Some(None)
                     } else {
-                        Some(Some(dest.to_owned()))
+                        Some(Some(dest.into()))
                     };
-                    i += 1; // this flag is self‑contained
-                } else if i + 1 < args.len() && !args[i + 1].starts_with("--") {
-                    // --release-bin /some/path
-                    config.release_bin = Some(Some(args[i + 1].clone()));
-                    i += 2;
+                } else if let Some(next) = all_args.peek() {
+                    if !next.starts_with("--") {
+                        cli_args.release_bin = Some(Some(all_args.next().unwrap()));
+                    } else {
+                        cli_args.release_bin = Some(None);
+                    }
                 } else {
-                    // --release-bin (no path supplied)
-                    config.release_bin = Some(None);
-                    i += 1;
+                    cli_args.release_bin = Some(None);
                 }
             }
+
             arg if arg == "--project" || arg.starts_with("--project=") => {
                 if let Some(name) = arg.strip_prefix("--project=") {
-                    // --project=my_proj
                     if name.is_empty() {
                         return Err(anyhow!("Missing project name after --project"));
                     }
-                    config.project = Some(name.to_owned());
-                    i += 1;
+                    cli_args.project = Some(name.into());
+                } else if let Some(name) = all_args.next() {
+                    cli_args.project = Some(name);
                 } else {
-                    // --project my_proj
-                    if i + 1 >= args.len() {
-                        return Err(anyhow!("Missing project name after --project"));
-                    }
-                    config.project = Some(args[i + 1].clone());
-                    i += 2;
+                    return Err(anyhow!("Missing project name after --project"));
                 }
             }
-            // If this doesn't start with -- and we don't have a project_name yet,
-            // treat it as the project name
-            _ if !arg.starts_with("--") && config.project_name.is_none() => {
-                config.project_name = Some(arg.clone());
-                i += 1;
-            }
-            // Otherwise, this and all remaining args are for the application
-            _ => {
-                // Collect this and all remaining args as app_args
-                config.app_args.extend(args[i..].iter().cloned());
-                break;
+
+            other => project_args.push(other.to_owned()),
+        }
+    }
+
+    if cli_args.project.is_none() {
+        if let Some(first) = project_args.first() {
+            if !first.starts_with("--") {
+                cli_args.project_name = Some(project_args.remove(0));
             }
         }
     }
 
-    Ok(config)
+    cli_args.project_args = project_args;
+
+    Ok(cli_args)
 }
