@@ -29,10 +29,12 @@ rustr [--project PROJECT] [PROJECT] --release
 rustr [--project PROJECT] [PROJECT] --release-bin [DESTINATION]
 ```
 
+Note: **rustr** is designed to operate on other projects. If you are inside the rustr repository itself, just run the usual `cargo build`, `cargo test`, etc.
+
 ### Project Selection
 
 The target project can be specified in three ways:
-1. Using the `--project` flag: `rustr --project myproject`
+1. Using the `--project` flag: `rustr --project myproject` or `rustr --project=myproject`
 2. As a positional argument: `rustr myproject`
 3. Automatically when in a project directory: `rustr`
 
@@ -67,7 +69,7 @@ rustr myproject --release
 rustr myproject --release-bin
 
 # Copy release build to custom directory
-rustr myproject --release-bin /path/to/dir
+rustr myproject --release-bin=/path/to/dir
 
 # Run tests for the project in the current directory
 rustr --test

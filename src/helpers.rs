@@ -30,9 +30,11 @@ pub fn print_help() {
     println!("  [PROJECT_NAME]");
     println!("          Project name");
     println!("  [ARGS]...");
-    println!("          Arguments to pass to the target application\n");
+    println!("          Arguments to pass to the target project\n");
 
     println!("{}", "Options:".bold().underline());
+    println!("      {}", "--test".bold());
+    println!("          Run tests for the project");
     println!("      {}", "--build".bold());
     println!("          Build the project");
     println!("      {}", "--release".bold());
@@ -42,7 +44,7 @@ pub fn print_help() {
     println!("      {} <PROJECT>", "--project".bold());
     println!("          Explicitly specify the target project");
     println!("      --");
-    println!("          Stop option parsing and pass the rest verbatim to the target application");
+    println!("          Stop option parsing and pass remaining arguments to the target project");
     println!("  -h, --help");
     println!("          Print help");
     println!("  -V, --version");
@@ -80,7 +82,8 @@ pub fn check_self_run(explicit: Option<&str>, positional: Option<&str>) -> Resul
         || (explicit.is_none() && positional.is_none() && is_self_project()?)
     {
         bail(&format!(
-            "Cannot run {} on itself - this would cause infinite recursion",
+            "Running {} on itself is not supported.\n\
+            Use `cargo build`, `cargo test`, or similar directly inside the repository.",
             app_name
         ))?;
     }
