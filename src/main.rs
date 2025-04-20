@@ -14,6 +14,13 @@ use crate::helpers::{
 };
 
 fn main() -> Result<()> {
+    // Exit early if no arguments are provided
+    if std::env::args_os().len() == 1 {
+        print_help();
+        return Ok(());
+    }
+
+    // Parse arguments
     let args = parse_args()?;
 
     // Check for self-run
