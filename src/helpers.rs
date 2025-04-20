@@ -90,9 +90,15 @@ pub fn check_self_run(explicit: Option<&str>, positional: Option<&str>) -> Resul
 pub fn find_project_dir(project_name: &str) -> Result<PathBuf> {
     // Check if we're in a project directory
     if Path::new(CARGO_TOML).exists() {
-        return Ok(PathBuf::from("."));
+        // Try to read its package name - if that fails, fall back to home search
+        if let Ok(current_name) = get_binary_name(&PathBuf::from(".")) {
+            if current_name == project_name {
+                return Ok(PathBuf::from("."));
+            }
+        }
     }
 
+    // Use the canonical project location
     let home = home_dir().context("Could not find home directory")?;
     let project_path = home.join(RUST_PROJECTS_DIR).join(project_name);
 
