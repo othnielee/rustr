@@ -29,7 +29,7 @@ rustr [--project PROJECT] [PROJECT] --release
 rustr [--project PROJECT] [PROJECT] --release-bin [DESTINATION]
 ```
 
-Note: **rustr** is designed to operate on other projects. If you are inside the rustr repository itself, just run the usual `cargo build`, `cargo test`, etc.
+**Note: rustr is designed to operate on other projects.** If you are inside the rustr repository itself, just run the usual `cargo build`, `cargo test`, etc.
 
 ### Project Selection
 
