@@ -81,6 +81,10 @@ rustr --test
 cargo install --path .
 ```
 
+## Contributing
+
+This project is not intended for active development or contributions. You are welcome to fork the project, adapt the code, and use it in your own projects under the terms of the license. There is no expectation of future updates or contributions back to this repository.
+
 ## License
 
 MIT
