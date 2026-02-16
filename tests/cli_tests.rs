@@ -1,4 +1,4 @@
-use rustr::cli::{parse_args_from, CliArgs};
+use rustr::cli::{CliArgs, parse_args_from};
 
 fn v(args: &[&str]) -> Vec<String> {
     args.iter().map(|s| s.to_string()).collect()

@@ -9,8 +9,8 @@ use std::process::Command;
 use crate::cli::*;
 use crate::constants::*;
 use crate::helpers::{
-    check_self_run, copy_bin, find_project_dir, get_binary_name, print_banner, print_help,
-    run_cargo_command,
+    check_self_run, copy_bin, find_project_dir, get_binary_name, get_package_name, print_banner,
+    print_help, run_cargo_command,
 };
 
 fn main() -> Result<()> {
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
         project_name
     } else if Path::new(CARGO_TOML).exists() {
         // Get project name from current directory's Cargo.toml
-        get_binary_name(&PathBuf::from("."))?
+        get_package_name(&PathBuf::from("."))?
     } else {
         print_help();
         return Ok(());

@@ -94,7 +94,7 @@ pub fn find_project_dir(project_name: &str) -> Result<PathBuf> {
     // Check if we're in a project directory
     if Path::new(CARGO_TOML).exists() {
         // Try to read its package name - if that fails, fall back to home search
-        if let Ok(current_name) = get_binary_name(&PathBuf::from(".")) {
+        if let Ok(current_name) = get_package_name(&PathBuf::from(".")) {
             if current_name == project_name {
                 return Ok(PathBuf::from("."));
             }
@@ -115,24 +115,147 @@ pub fn find_project_dir(project_name: &str) -> Result<PathBuf> {
     Ok(project_path)
 }
 
-pub fn get_binary_name(project_dir: &Path) -> Result<String> {
+pub fn get_package_name(project_dir: &Path) -> Result<String> {
     let cargo_toml = project_dir.join(CARGO_TOML);
     let contents = fs::read_to_string(cargo_toml)?;
+    let mut in_package_section = false;
 
     for line in contents.lines() {
-        if line.trim().starts_with(NAME_KEY) {
-            let name = line
-                .split('=')
-                .nth(1)
-                .context(format!("Invalid {} format", CARGO_TOML))?
-                .trim()
-                .trim_matches(|c| c == '"' || c == ' ');
-            return Ok(name.to_string());
+        let trimmed = line.trim();
+        if trimmed == "[package]" {
+            in_package_section = true;
+            continue;
+        }
+        if trimmed.starts_with('[') {
+            in_package_section = false;
+            continue;
+        }
+
+        if in_package_section {
+            if let Some(name) = parse_toml_string_value(trimmed, "name") {
+                return Ok(name);
+            }
         }
     }
 
     bail(&format!("Could not find project name in {}", CARGO_TOML))?;
     unreachable!()
+}
+
+pub fn get_binary_name(project_dir: &Path) -> Result<String> {
+    let package_name = get_package_name(project_dir)?;
+    let cargo_toml = project_dir.join(CARGO_TOML);
+    let contents = fs::read_to_string(cargo_toml)?;
+
+    let mut in_package_section = false;
+    let mut in_bin_section = false;
+    let mut default_run = None;
+    let mut autobins_enabled = true;
+    let mut explicit_bin_names = Vec::new();
+
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[package]" {
+            in_package_section = true;
+            in_bin_section = false;
+            continue;
+        }
+        if trimmed == "[[bin]]" {
+            in_package_section = false;
+            in_bin_section = true;
+            continue;
+        }
+        if trimmed.starts_with('[') {
+            in_package_section = false;
+            in_bin_section = false;
+            continue;
+        }
+
+        if in_package_section {
+            if default_run.is_none() {
+                default_run = parse_toml_string_value(trimmed, "default-run");
+            }
+            if let Some(autobins) = parse_toml_bool_value(trimmed, "autobins") {
+                autobins_enabled = autobins;
+            }
+        }
+
+        if in_bin_section {
+            if let Some(name) = parse_toml_string_value(trimmed, "name") {
+                explicit_bin_names.push(name);
+            }
+        }
+    }
+
+    if let Some(default_run) = default_run {
+        return Ok(default_run);
+    }
+
+    if explicit_bin_names.iter().any(|name| name == &package_name) {
+        return Ok(package_name);
+    }
+
+    if autobins_enabled && project_dir.join("src").join("main.rs").exists() {
+        return Ok(package_name);
+    }
+
+    if explicit_bin_names.len() == 1 {
+        return Ok(explicit_bin_names.swap_remove(0));
+    }
+
+    if explicit_bin_names.len() > 1 {
+        bail(&format!(
+            "Multiple binary targets found in {}. Set [package].default-run or define a binary named '{}'.",
+            CARGO_TOML, package_name
+        ))?;
+    }
+
+    // Fall back to the package name if no explicit binary target exists.
+    Ok(package_name)
+}
+
+fn parse_toml_string_value(line: &str, key: &str) -> Option<String> {
+    let (raw_key, raw_value) = line.split_once('=')?;
+    if raw_key.trim() != key {
+        return None;
+    }
+
+    let value = raw_value.trim_start();
+    if !value.starts_with('"') {
+        return None;
+    }
+
+    let mut parsed = String::new();
+    let mut escaped = false;
+
+    for ch in value[1..].chars() {
+        if escaped {
+            parsed.push(ch);
+            escaped = false;
+            continue;
+        }
+
+        match ch {
+            '\\' => escaped = true,
+            '"' => return Some(parsed),
+            _ => parsed.push(ch),
+        }
+    }
+
+    None
+}
+
+fn parse_toml_bool_value(line: &str, key: &str) -> Option<bool> {
+    let (raw_key, raw_value) = line.split_once('=')?;
+    if raw_key.trim() != key {
+        return None;
+    }
+
+    match raw_value.split('#').next()?.trim() {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    }
 }
 
 pub fn run_cargo_command(project_dir: &Path, args: &[&str]) -> Result<()> {
