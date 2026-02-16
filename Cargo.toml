@@ -2,13 +2,13 @@
 name = "rustr"
 version = "1.0.0"
 description = "Rust/Cargo Task Runner"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 
 [dependencies]
-anyhow = "1.0.98"
-colored = "3.0.0"
-home = "0.5.11"
+anyhow = "1.0.101"
+colored = "3.1.1"
+home = "0.5.12"
 
 [build-dependencies]
-chrono = "0.4.40"
+chrono = "0.4.43"
