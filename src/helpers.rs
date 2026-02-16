@@ -7,6 +7,12 @@ use std::process::Command;
 
 use crate::constants::*;
 
+#[derive(Default)]
+struct BinTarget {
+    name: Option<String>,
+    path: Option<String>,
+}
+
 pub fn print_banner() {
     let app_name = env!("APP_NAME");
     let app_version = env!("APP_VERSION");
@@ -151,7 +157,7 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
     let mut in_bin_section = false;
     let mut default_run = None;
     let mut autobins_enabled = true;
-    let mut explicit_bin_names = Vec::new();
+    let mut explicit_bins: Vec<BinTarget> = Vec::new();
 
     for line in contents.lines() {
         let trimmed = line.trim();
@@ -163,6 +169,7 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
         if trimmed == "[[bin]]" {
             in_package_section = false;
             in_bin_section = true;
+            explicit_bins.push(BinTarget::default());
             continue;
         }
         if trimmed.starts_with('[') {
@@ -181,8 +188,13 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
         }
 
         if in_bin_section {
-            if let Some(name) = parse_toml_string_value(trimmed, "name") {
-                explicit_bin_names.push(name);
+            if let Some(bin) = explicit_bins.last_mut() {
+                if bin.name.is_none() {
+                    bin.name = parse_toml_string_value(trimmed, "name");
+                }
+                if bin.path.is_none() {
+                    bin.path = parse_toml_string_value(trimmed, "path");
+                }
             }
         }
     }
@@ -191,7 +203,15 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
         return Ok(default_run);
     }
 
-    if explicit_bin_names.iter().any(|name| name == &package_name) {
+    if let Some(name) = get_explicit_main_bin_name(&explicit_bins) {
+        return Ok(name);
+    }
+
+    if explicit_bins
+        .iter()
+        .filter_map(|bin| bin.name.as_deref())
+        .any(|name| name == package_name)
+    {
         return Ok(package_name);
     }
 
@@ -199,8 +219,13 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
         return Ok(package_name);
     }
 
+    let mut explicit_bin_names = explicit_bins
+        .into_iter()
+        .filter_map(|bin| bin.name)
+        .collect::<Vec<_>>();
+
     if explicit_bin_names.len() == 1 {
-        return Ok(explicit_bin_names.swap_remove(0));
+        return Ok(explicit_bin_names.pop().unwrap());
     }
 
     if explicit_bin_names.len() > 1 {
@@ -212,6 +237,30 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
 
     // Fall back to the package name if no explicit binary target exists.
     Ok(package_name)
+}
+
+fn get_explicit_main_bin_name(bins: &[BinTarget]) -> Option<String> {
+    let mut names = bins
+        .iter()
+        .filter_map(|bin| {
+            let path = bin.path.as_deref()?;
+            if is_main_source_path(path) {
+                return bin.name.clone();
+            }
+            None
+        })
+        .collect::<Vec<_>>();
+
+    if names.len() == 1 {
+        return names.pop();
+    }
+    None
+}
+
+fn is_main_source_path(path: &str) -> bool {
+    let normalized = path.replace('\\', "/");
+    let normalized = normalized.trim_start_matches("./");
+    normalized == "src/main.rs"
 }
 
 fn parse_toml_string_value(line: &str, key: &str) -> Option<String> {

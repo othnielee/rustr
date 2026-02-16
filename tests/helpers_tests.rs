@@ -81,6 +81,25 @@ path = "src/bin/worker.rs"
 }
 
 #[test]
+fn binary_name_uses_explicit_src_main_bin_name_when_renamed() {
+    let project = TempProject::new(
+        r#"
+[package]
+name = "sensa-cli"
+version = "1.0.0"
+
+[[bin]]
+name = "sensa"
+path = "src/main.rs"
+"#,
+    );
+    project.write_file("src/main.rs", "fn main() {}");
+
+    let binary = get_binary_name(&project.path).unwrap();
+    assert_eq!(binary, "sensa");
+}
+
+#[test]
 fn binary_name_uses_package_name_when_src_main_exists() {
     let project = TempProject::new(
         r#"
