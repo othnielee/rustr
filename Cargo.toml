@@ -5,6 +5,9 @@ description = "Rust/Cargo Task Runner"
 edition = "2024"
 license = "MIT"
 
+[lints.clippy]
+too_many_lines = "deny"
+
 [dependencies]
 anyhow = "1.0.101"
 colored = "3.1.1"

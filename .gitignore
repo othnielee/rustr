@@ -3,7 +3,6 @@
 
 # Rust generated
 **/*.rs.bk
-Cargo.lock
 
 # Logs
 logs
@@ -42,11 +41,19 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# AI agents
+CLAUDE.md
+.agents
+.opencode
+.claude
+.codex
+.cursor
+
 # Config
 .env
-.env.test
-.env.local
-/config
+.env.*
 
-# Data and I/O
+# App
+/config
 /data
+/work
