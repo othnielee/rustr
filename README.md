@@ -40,6 +40,13 @@ The target project can be specified in three ways:
 
 The `--project` flag takes precedence over other methods.
 
+A name resolves to the current directory when its `Cargo.toml` declares that package, and otherwise to a directory of that name under the projects directory. The projects directory is `dev/Rust` under your home directory; set `RUSTR_PROJECTS_DIR` to use another location, or change the default as described under Changing the Defaults:
+
+```bash
+export RUSTR_PROJECTS_DIR=/path/to/projects
+rustr myproject --release
+```
+
 ### Flag Precedence and Behavior
 
 When multiple task runner flags are specified, they are handled in this order:
@@ -80,6 +87,13 @@ rustr --test
 ```bash
 cargo install --path .
 ```
+
+## Changing the Defaults
+
+The defaults live in `src/constants.rs` as plain constants. Edit them and reinstall with `cargo install --path .`.
+
+- `RUST_PROJECTS_DIR` (`dev/Rust`) is the directory under your home where projects are found by name. `RUSTR_PROJECTS_DIR` overrides it at run time without a rebuild.
+- `BIN_DIR` (`bin`) is the directory under your home where `--release-bin` copies the binary when no destination is given.
 
 ## Contributing
 
