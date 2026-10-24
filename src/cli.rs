@@ -84,12 +84,11 @@ where
         }
     }
 
-    if parsed_args.project.is_none() {
-        if let Some(first) = project_args.first() {
-            if !first.starts_with("--") {
-                parsed_args.project_name = Some(project_args.remove(0));
-            }
-        }
+    if parsed_args.project.is_none()
+        && let Some(first) = project_args.first()
+        && !first.starts_with("--")
+    {
+        parsed_args.project_name = Some(project_args.remove(0));
     }
 
     parsed_args.project_args = project_args;

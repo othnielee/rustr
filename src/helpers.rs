@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use colored::*;
 use home::home_dir;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -17,8 +18,12 @@ pub fn print_banner() {
     let app_name = env!("APP_NAME");
     let app_version = env!("APP_VERSION");
     let app_build = env!("APP_BUILD");
+    let app_commit = env!("APP_COMMIT");
 
-    println!("{} v{} (build {})", app_name, app_version, app_build);
+    println!(
+        "{} v{} (build {}, commit {})",
+        app_name, app_version, app_build, app_commit
+    );
 }
 
 pub fn print_help() {
@@ -54,7 +59,14 @@ pub fn print_help() {
     println!("  -h, --help");
     println!("          Print help");
     println!("  -V, --version");
-    println!("          Print version");
+    println!("          Print version\n");
+
+    println!("{}", "Environment:".bold().underline());
+    println!("      {}", RUST_PROJECTS_DIR_ENV_VAR.bold());
+    println!(
+        "          Directory searched for projects by name (default: ~/{})",
+        RUST_PROJECTS_DIR
+    );
 }
 
 fn bail(message: &str) -> Result<()> {
@@ -96,20 +108,33 @@ pub fn check_self_run(explicit: Option<&str>, positional: Option<&str>) -> Resul
     Ok(())
 }
 
+pub fn projects_dir() -> Result<PathBuf> {
+    let home = home_dir().context("Could not find home directory")?;
+    Ok(projects_dir_from(
+        std::env::var_os(RUST_PROJECTS_DIR_ENV_VAR).as_deref(),
+        &home,
+    ))
+}
+
+pub fn projects_dir_from(override_value: Option<&OsStr>, home: &Path) -> PathBuf {
+    match override_value {
+        Some(value) if !value.is_empty() => PathBuf::from(value),
+        _ => home.join(RUST_PROJECTS_DIR),
+    }
+}
+
 pub fn find_project_dir(project_name: &str) -> Result<PathBuf> {
     // Check if we're in a project directory
     if Path::new(CARGO_TOML).exists() {
         // Try to read its package name - if that fails, fall back to home search
-        if let Ok(current_name) = get_package_name(&PathBuf::from(".")) {
-            if current_name == project_name {
-                return Ok(PathBuf::from("."));
-            }
+        if let Ok(current_name) = get_package_name(&PathBuf::from("."))
+            && current_name == project_name
+        {
+            return Ok(PathBuf::from("."));
         }
     }
 
-    // Use the canonical project location
-    let home = home_dir().context("Could not find home directory")?;
-    let project_path = home.join(RUST_PROJECTS_DIR).join(project_name);
+    let project_path = projects_dir()?.join(project_name);
 
     if !project_path.exists() {
         bail(&format!(
@@ -137,10 +162,8 @@ pub fn get_package_name(project_dir: &Path) -> Result<String> {
             continue;
         }
 
-        if in_package_section {
-            if let Some(name) = parse_toml_string_value(trimmed, "name") {
-                return Ok(name);
-            }
+        if in_package_section && let Some(name) = parse_toml_string_value(trimmed, "name") {
+            return Ok(name);
         }
     }
 
@@ -187,14 +210,12 @@ pub fn get_binary_name(project_dir: &Path) -> Result<String> {
             }
         }
 
-        if in_bin_section {
-            if let Some(bin) = explicit_bins.last_mut() {
-                if bin.name.is_none() {
-                    bin.name = parse_toml_string_value(trimmed, "name");
-                }
-                if bin.path.is_none() {
-                    bin.path = parse_toml_string_value(trimmed, "path");
-                }
+        if in_bin_section && let Some(bin) = explicit_bins.last_mut() {
+            if bin.name.is_none() {
+                bin.name = parse_toml_string_value(trimmed, "name");
+            }
+            if bin.path.is_none() {
+                bin.path = parse_toml_string_value(trimmed, "path");
             }
         }
     }

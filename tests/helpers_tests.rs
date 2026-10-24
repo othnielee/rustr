@@ -1,7 +1,8 @@
-use rustr::constants::CARGO_TOML;
-use rustr::helpers::get_binary_name;
+use rustr::constants::{CARGO_TOML, RUST_PROJECTS_DIR};
+use rustr::helpers::{get_binary_name, projects_dir_from};
+use std::ffi::OsStr;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct TempProject {
@@ -85,18 +86,18 @@ fn binary_name_uses_explicit_src_main_bin_name_when_renamed() {
     let project = TempProject::new(
         r#"
 [package]
-name = "sensa-cli"
+name = "alpha-cli"
 version = "1.0.0"
 
 [[bin]]
-name = "sensa"
+name = "alpha"
 path = "src/main.rs"
 "#,
     );
     project.write_file("src/main.rs", "fn main() {}");
 
     let binary = get_binary_name(&project.path).unwrap();
-    assert_eq!(binary, "sensa");
+    assert_eq!(binary, "alpha");
 }
 
 #[test]
@@ -162,4 +163,22 @@ path = "src/bin/worker-b.rs"
 
     let error = get_binary_name(&project.path).unwrap_err().to_string();
     assert!(error.contains("Multiple binary targets"));
+}
+
+#[test]
+fn projects_dir_uses_override_when_set() {
+    let resolved = projects_dir_from(Some(OsStr::new("/beta/projects")), Path::new("/alpha"));
+    assert_eq!(resolved, PathBuf::from("/beta/projects"));
+}
+
+#[test]
+fn projects_dir_defaults_under_home_when_override_is_unset() {
+    let resolved = projects_dir_from(None, Path::new("/alpha"));
+    assert_eq!(resolved, Path::new("/alpha").join(RUST_PROJECTS_DIR));
+}
+
+#[test]
+fn projects_dir_treats_empty_override_as_unset() {
+    let resolved = projects_dir_from(Some(OsStr::new("")), Path::new("/alpha"));
+    assert_eq!(resolved, Path::new("/alpha").join(RUST_PROJECTS_DIR));
 }

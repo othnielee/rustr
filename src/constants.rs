@@ -1,6 +1,7 @@
 // Configuration constants
 pub const CARGO_COMMAND: &str = "cargo";
 pub const CARGO_TOML: &str = "Cargo.toml";
+pub const RUST_PROJECTS_DIR_ENV_VAR: &str = "RUSTR_PROJECTS_DIR";
 pub const RUST_PROJECTS_DIR: &str = "dev/Rust";
 pub const BIN_DIR: &str = "bin";
 pub const TARGET_DIR: &str = "target";
